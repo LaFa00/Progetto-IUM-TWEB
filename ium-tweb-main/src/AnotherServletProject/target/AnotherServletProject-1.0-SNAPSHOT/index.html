@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <meta http-equiv="cache-control" content="no-cache" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <title>Home</title>
+</head>
+<body>
+<div id="app">
+    <header>
+        <p><h3>Servizio Online per la prenotazione di ripetizioni </h3></p>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand"v-on:click="Pannels">Home</a>
+                <img src="images/user.png" width="60" height="60"/>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+        </nav>
+</header>
+<article>
+    <div class="text-center">
+        <template v-if="login">
+        <div class="form-group"><br>
+            Account: <input v-model="user" autocomplete="off" type="text" placeholder="Account" required />
+        </div>
+        <br>
+        <div class="form-group">
+            Password: <input v-model="psws" type="password" autocomplete="off" placeholder="Password" required/>
+        </div>
+        <br>
+        <div class="text-center">
+            <autenticazione v-on:transit-inner="transit"></autenticazione>
+            <p>Se non sei registrato, clicca "Login come ospite"!</p>
+            <autenticazione-guest v-on:guest-log="guestLog">Login come ospite</autenticazione-guest>
+        </div>
+        </template>
+    </div>
+        <template v-if="pannels">
+            <template v-if="this.role == 'amministratore'">
+                <p id="intestazione0">Pannello Amministratore!</p>
+                <div class="text-left">
+                    <p>Benvenuto admin!</p>
+                    <div id="adminstorico">
+                        <show-storico v-on:admin-storico="AdminStorico"></show-storico>
+                    </div>
+                    <div id="adminbooking">
+                    <admin-add-booking v-on:adminadd="AdminAdd"></admin-add-booking>
+                    </div>
+                    <br>
+                    <div id="adminprenota">
+                    <prenotazioni v-on:prenota="Prenota"></prenotazioni>
+                    </div>
+                    <br>
+                    <div id="admindisponibili">
+                    <all-booking v-on:allbook="AllBook">Prenotazioni Disponibili</all-booking>
+                    </div>
+                    <br>
+                    <logout class="btn btn-warning" v-on:log-out="LogOut">Log Out</logout>
+                </div>
+            </template>
+            <template v-if="this.role == 'cliente'" id="clientView">
+                <p id="intestazione1">Area Personale</p>
+                <div class="text-left">
+                    <p>Benvenuto/a {{this.user}} nella tua area personale!</p>
+                    <p>Qui puoi scegliere se prenotarti, visualizzare le tue prenotazioni o quelle ancora disponibili!</p>
+                </div>
+                <div id="showstoricoute">
+                    <show-storico v-on:admin-storico="AdminStorico"></show-storico>
+                </div>
+                <br>
+                <div id="allbook">
+                    <all-booking v-on:allbook="AllBook">Prenotazioni Disponibili</all-booking>
+                </div>
+                <br>
+                <div id="prenota">
+                    <prenotazioni v-on:prenota="Prenota"></prenotazioni>
+                </div>
+                <br>
+                <div id="mie-prenotazioni">
+                    <mybooking class="btn btn-primary" v-on:mybook="MyBook">Le Mie Prenotazioni</mybooking>
+                </div>
+                <br>
+                <logout class="btn btn-warning" v-on:log-out="LogOut">Log Out</logout>
+            </template>
+            <template v-if="this.role == 'guest'">
+                <p id="intestazione2">Pannello Guest!</p>
+                <div class="text-center">
+                    <p>Benvenuto guest!</p>
+                    <p>Ci spiace che non sia tra gli utenti registrati!</p>
+                    <p>In quanto guest puoi solo visualizzare le ripetizioni disponibili!</p>
+                    <div id="tutte">
+                        <h3>Visualizza catalogo!</h3>
+                        <div id="allBookGuest">
+                            <all-booking-guest v-on:allbookguest="AllBookGuest">Prenotazioni Disponibili</all-booking-guest>
+                        </div>
+                    </div>
+                </div>
+                <logout-guest class="btn btn-warning" v-on:logoutguest="LogOutGuest">Log Out</logout-guest>
+            </template>
+        </template>
+    <template v-if="booking">
+        <p>Benvenuto {{this.user}}!</p>
+        <bookingpage v-on:aggiungiprenotazione="AddBooking" v-on:cancellaprenotazione="DeleteBooking"></bookingpage>
+        <logout class="btn btn-danger" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+    <template v-if="addbooking">
+        <p>Da oggi è facile prenotare una o più ripetizioni! Nella form sottostante potrai scegliere : corso, giorno e orario!</p>
+        <div>
+            <table class="table table-hover" id="tableaddbooking">
+                <thead>
+                <tr>
+                    <th scope="col">Docente</th>
+                    <th scope="col">Corso</th>
+                    <th scope="col">Giorno</th>
+                    <th scope="col">Orario</th>
+                </tr>
+                </thead>
+                <tbody>
+                <template v-for="p in allprenotazioni" :value="p">
+                    <tr  @click="addChoiche(p)" data-toggle="popover" title="Prenotami!">
+                        <td>{{p.nomeDocente}} {{p.cognomeDocente}}</td>
+                        <td>{{p.Corso}}</td>
+                        <td>{{p.giorno}}</td>
+                        <td>{{p.orario}}</td>
+                        <td><p style="color:green">Prenotabile</p></td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+        </div>
+        <br>
+        <logout class="btn btn-danger" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+    <template v-if="deletebooking">
+        <h2>Scegli quali delle prenotazioni effettuate cancellare</h2>
+        <p> Scegli prenotazione:
+        <div>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">Docente</th>
+                    <th scope="col">Corso</th>
+                    <th scope="col">Giorno</th>
+                    <th scope="col">Orario</th>
+                </tr>
+                </thead>
+                <tbody>
+                <template v-for="p in prenotazioni" :value="p">
+                    <tr @click="deleteChoice(p)">
+                        <td>{{p.nomeDocente}} {{p.cognomeDocente}}</td>
+                        <td>{{p.Corso}}</td>
+                        <td>{{p.giorno}}</td>
+                        <td>{{p.orario}}</td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+        </div>
+        </p>
+        <br>
+        <logout class="btn btn-danger" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+    <template v-if="mybooking">
+        <h2>{{this.user}} visualizza le tue prenotazioni!</h2>
+        <div>
+        <table class="table table-">
+            <thead>
+                <th>Corso</th>
+                <th>Giorno</th>
+                <th>Orario</th>
+                <th>Docente</th>
+                <th>Stato Prenotazione</th>
+            </thead>
+            <tbody>
+            <tr v-for="p in prenotazioni" :value="p" data-toggle="popover" title="Prenotazione Effettuata">
+                <th scope="row">{{p.Corso}}</th>
+                <th scope="row">{{p.giorno}}</th>
+                <th scope="row">{{p.orario}}</th>
+                <th scope="row">{{p.nomeDocente}} {{p.cognomeDocente}}</th>
+                <th scope="row" style="color:#74e774">{{p.available}}</th>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+        <br>
+        <logout class="btn btn-danger" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+    <template v-if="allbooking">
+        <h2>Visualizza le prenotazioni disponibili</h2>
+        <div>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Docente</th>
+                    <th scope="col">Corso</th>
+                    <th scope="col">Giorno</th>
+                    <th scope="col">Orario</th>
+                </tr>
+                </thead>
+                <tbody>
+                <template v-for="p in allprenotazioni" :value="p">
+                    <tr data-toggle="popover" title="Corso Disponibile">
+                        <td>{{p.nomeDocente}} {{p.cognomeDocente}}</td>
+                        <td>{{p.Corso}}</td>
+                        <td>{{p.giorno}}</td>
+                        <td>{{p.orario}}</td>
+                        <td style="color:cadetblue">{{p.available}}</td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+        </div>
+        <br>
+        <logout class="btn btn-danger" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+    <template v-if="adminaddbooking">
+        <div class="input-group flex-nowrap">
+            Nome: <input type="text" aria-label="First name" class="form-control" v-model="nomeDocente">
+        </div>
+        <br>
+        <div class="input-group flex-nowrap">
+           Cognome Docente: <input type="text" class="form-control" aria-describedby="addon-wrapping" v-model="cognomeDocente">
+        </div>
+        <br>
+        <div class="input-group flex-nowrap">
+            ID Docente: <input type="text" class="form-control" aria-describedby="addon-wrapping" v-model="id_docente">
+        </div>
+        <br>
+        <div class="input-group flex-nowrap">
+            Corso: <input type="text" class="form-control" aria-describedby="addon-wrapping" v-model="corso">
+        </div>
+        <br>
+        <div class="input-group flex-nowrap">
+            ID Corso: <input type="text" class="form-control" aria-describedby="addon-wrapping" v-model="id_corso">
+        </div>
+        <br>
+        <button type="button" class="btn btn-primary" v-on:click="adminInsert">Inserisci</button>
+        <button type="button" class="btn btn-warning" v-on:click="adminDelete">Elimina</button>
+        <logout class="btn btn-warning" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+    <template v-if="showstorico">
+        <p>Qui puoi visualizzare lo storico delle prenotazioni!</p>
+        <div>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Utente</th>
+                    <th scope="col">Docente</th>
+                    <th scope="col">Corso</th>
+                    <th scope="col">Giorno</th>
+                    <th scope="col">Orario</th>
+                    <th scope="col">Available</th>
+                </tr>
+                </thead>
+                <tbody>
+                <template v-for="p in storico" :value="p">
+                    <tr>
+                        <td>{{p.utente}}</td>
+                        <td>{{p.nomeDocente}} {{p.cognomeDocente}}</td>
+                        <td>{{p.Corso}}</td>
+                        <td>{{p.giorno}}</td>
+                        <td>{{p.orario}}</td>
+                        <td style="color:cadetblue">{{p.available}}</td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+        </div>
+        <br>
+        <logout class="btn btn-warning" v-on:log-out="LogOut">Log Out</logout>
+    </template>
+</article>
+<footer>
+    <p font-size="5">Progetto IUM-TWEB a.a. 2021-2022</p>
+    <p font-size="5">Giuseppe Pio Lobascio, Matr: 916981</p>
+    <p font-size="5">Daniele La Fauci, Matr: 898389</p>
+    <p font-size="5">Manal Fouah, Matr: 931322</p>
+</footer>
+</div>
+    <script>
+        Vue.component('showStorico', {
+            props : [],
+            template : '<button type="button" class="btn btn-primary" v-on:click="AdminStorico">Visualizza storico</button><br>',
+            methods:{
+                AdminStorico: function(){
+                    this.$emit('admin-storico');
+                }
+            }
+        })
+
+        //Autenticazione Utente
+        Vue.component('autenticazione', {
+            props: [],
+            template : '<button type="button" class="btn btn-primary" v-on:click="transitInner">Log In</button>',
+                methods: {
+                    transitInner: function () {
+                        this.$emit('transit-inner');
+                    }
+                }
+            })
+
+        Vue.component('manage-all',{
+            template:'<div><button class="btn btn-warning" v-on:click="Manage">Aggiungi Docenti e Corsi</button></div>',
+            methods:{
+                Manage: function(){
+                    this.$emit('manageteachers');
+                }
+            }
+        })
+
+        Vue.component('allBooking', {
+            props: [],
+            template:'<button class="btn btn-warning" v-on:click="AllBook"> Prenotazioni Disponibili </button>',
+            methods: {
+                AllBook: function () {
+                    this.$emit('allbook');
+                }
+
+            }
+        })
+
+        Vue.component('allBookingGuest', {
+            props: [],
+            template: '<button class="btn btn-warning" v-on:click="AllBookGuest">Prenotazioni Disponibili</button>',
+            methods: {
+                AllBookGuest: function () {
+                    this.$emit('allbookguest');
+                }
+            }
+        })
+
+        Vue.component('allBookingAdmin', {
+            props: [],
+            template: '<button class="btn btn-warning" v-on:click="AllBookAdmin">Prenotazioni Disponibili</button>',
+            methods: {
+                AllBookAdmin: function () {
+                    this.$emit('allbookadmin');
+                }
+            }
+        })
+
+        Vue.component('autenticazione-guest', {
+            props: [],
+            template : '<button type="button" class="btn btn-primary" v-on:click="guestLog">Login come ospite</button>',
+            methods: {
+                guestLog:function(){
+                    this.$emit('guest-log');
+                }
+            }
+        })
+
+        Vue.component('logout-guest',{
+            prop : [],
+            template: '<button type="button" class="btn btn-danger" v-on:click="LogOutGuest">Log Out</button>',
+            methods:{
+                LogOutGuest:function(){
+                    this.$emit('logoutguest');
+                },
+            }
+
+        })
+
+        Vue.component('logout',{
+            prop : [],
+            template: '<button type="button" class="btn btn-danger" v-on:click="LogOut">Log Out</button>',
+            methods:{
+                LogOut:function(){
+                    this.$emit('log-out');
+                },
+            }
+
+        })
+
+        Vue.component('prenotazioni', {
+            prop: [],
+            template: '<button class="btn btn-success" v-on:click="Prenota">Prenota Ripetizione</button>',
+            methods: {
+                Prenota: function () {
+                    this.$emit('prenota');
+                }
+            }
+        })
+
+        Vue.component('bookingpage', {
+            prop: [],
+            template:' <div class="d-inline-block">' +
+            '&nbsp;&nbsp;&nbsp;<button class="btn btn-success" v-on:click="AddBooking">Aggiungi Prenotazione</button>'+
+                '&nbsp;&nbsp;&nbsp;<button class="btn btn-primary" v-on:click="DeleteBooking">Cancella Prenotazione</button></div>',
+            methods: {
+                AddBooking:function(){
+                    this.$emit('aggiungiprenotazione');
+                },
+                DeleteBooking:function () {
+                    this.$emit('cancellaprenotazione');
+                }
+            }
+        }),
+
+        Vue.component('mybooking',{
+            prop : [],
+            template: '<button class="btn btn-primary" v-on:click="MyBook">Le Mie Prenotazioni</button>',
+            methods:{
+                MyBook:function(){
+                        this.$emit('mybook');
+                }
+            }
+        })
+
+        Vue.component('adminAddBooking', {
+            prop:[],
+            template: '<button class="btn btn-primary" v-on:click="AdminAdd"> Aggiungi Corsi e Docente </button>',
+            methods: {
+                AdminAdd: function () {
+                    this.$emit("adminadd");
+                }
+            }
+        })
+
+        //app
+        var App = new Vue({
+          el: "#app",
+          data: {
+                user:'',
+                psws:'',
+                role:'---',
+                corso:'',
+                login: true, //schermata Login
+               // home: true, //schermata Home(schermata login)
+                pannels: false, //Schermata scelta operazioni
+                booking: false, //Schermata prenotazioni
+                addbooking: false, //Schermata aggiunta prenotazioni
+                deletebooking: false, //Schermata cancellazione prenotazioni
+                mybooking:false, //Schermata mie prenotazioni
+                allbooking: false, //Schermata prenotazioni disponibili
+                adminaddbooking:false, //Schermata operazioni aggiunta
+                showcorsi: false,
+                showstorico : false,
+                nomeDocente: '',
+                cognomeDocente: '',
+                id_docente: '',
+                corso: '',
+                id_corso: '',
+                tables : '',
+                corsis : [], //oggetto che contiene i corsi
+                prenotazioni: [], //oggetto che contiene prenotazioni
+                teachers : [], //oggetto che contiene gli insegnanti
+                corsifetched : [],
+                hourfetched : [],
+                corsodocente: [],
+                personalipren: [],
+                allprenotazioni: [],
+                storico : [],
+                giorno: '',
+                orario: '',
+                jsonResult:'',
+                ownbook:'',
+                link: "controlServlet"
+          },
+          methods: {
+              //storico
+              AdminStorico:function(){
+                  var self = this;
+                  if(self.showstorico === false){
+                      self.showstorico = true;
+                      self.login = false;
+                      self.addbooking = false;
+                      self.booking = false;
+                      self.mybooking = false;
+                      self.allbooking = false;
+                      self.pannels = false;
+                  }
+                  $.post(this.link, {utente: this.user, password: this.psws, role: this.role, action:'Give Storico'}, function(data){
+                     if(data === 'invalidate'){
+                         alert('Sessione invalidata!');
+                     }else{
+                         alert('Visualizzo lo storico.');
+                         let storicoObj = JSON.parse(data);
+                         self.storico = storicoObj;
+                     }
+                 })
+              },
+              checkDays:function () {
+                    var self = this;
+                    $.post(this.link, {utente: this.user, password: this.psws, corso : this.corsodocente.Corso, action:'Check giorni'}, function(data) {
+                        if(data === 'invalidate'){
+                            alert('Sessione Invalidata!');
+                        }else{
+                            alert('Fetching days...');
+                            let corsifetchedObj = JSON.parse(data);
+                            self.corsifetched = corsifetchedObj;
+                            console.log(self.corsifetched);
+                        }
+                    })
+              },
+              checkHours:function () {
+                  var self = this;
+                  $.post(this.link, {utente: this.user, password: this.psws, corso : this.corsodocente.Corso, giorno : this.giorno, action:'Check orari'}, function(data) {
+                      if(data === 'invalidate'){
+                          alert('Sessione Invalidata!');
+                      }else{
+                          alert('Fetching hours...');
+                          let hourfetchedObj = JSON.parse(data);
+                          self.hourfetched = hourfetchedObj;
+                          console.log(self.hourfetched);
+                      }
+                  })
+              },
+              transit: function () { //Da login a schermata pannelli
+                  var self = this;
+                  $.post(this.link, {utente: this.user, password: this.psws, action: 'Request role'},
+                      function (data) {
+                          self.role = data;
+                          if (self.login === true) {
+                              self.pannels = true;
+                              self.login = false;
+                              self.addbooking = false;
+                              self.booking = false;
+                              self.mybooking = false;
+                              self.allbooking = false;
+                              self.showstorico = false;
+                          }
+                      }).fail(function (ajaxContext) {
+                      alert('Wrong name or password! Retry!');
+                      this.home = true;
+                  });
+              },
+              guestLog:function(){
+                    var self = this;
+                    $.post(this.link, {utente:null, password:null, action:'Request role'}, function(data){
+                        self.role = data;
+                        alert('Utente guest!');
+                        if (self.login === true) {
+                            self.pannels = true;
+                            self.login = false;
+                            self.addbooking = false;
+                            self.booking = false;
+                            self.mybooking = false;
+                            self.showstorico = false;
+                        }
+                    })
+              },
+              LogOutGuest:function () {
+                  var self = this;
+                  $.post(this.link, {
+                      utente:'',
+                      password:'',
+                      action: 'Request logout'
+                  }, function (data) {
+                      self.role = data;
+                      if (self.pannels === true || self.booking === true || self.addbooking === true || self.deletebooking === true || self.mybooking === true || self.showstorico === true) {
+                          self.login = true;
+                          self.pannels = false;
+                          self.booking = false;
+                          self.addbooking = false;
+                          self.mybooking = false;
+                          self.showstorico = false;
+                      }
+                  });
+              },
+              AllBook:function () {
+                  var self = this;
+                  if(this.allbooking === false) {
+                      this.login = false;
+                      this.addbooking = false;
+                      this.booking = false;
+                      this.pannels = false;
+                      this.mybooking = false;
+                      this.allbooking = true;
+                      this.showstorico = false;
+                  }
+                  $.post(this.link, {
+                      utente: this.user,
+                      password: this.psws,
+                      action: 'Request AllPrenotazioniDisponibili'
+                  }, function (data) {
+                      if(data === 'invalidate') {
+                          alert('Sessione invalidata');
+                      } else {
+                          self.allprenotazioni = [];
+                          let allPrenotazioniOBJ = '';
+                          allPrenotazioniOBJ = JSON.parse(data);
+                          self.allprenotazioni = allPrenotazioniOBJ;
+                          console.log(self.allprenotazioni);
+                      }
+                  });
+              },
+              AllBookGuest: function () {
+                  var self = this;
+                  if(this.allbooking === false) {
+                      this.login = false;
+                      this.addbooking = false;
+                      this.booking = false;
+                      this.pannels = false;
+                      this.mybooking = false;
+                      this.allbooking = true;
+                      this.showstorico = false;
+                  }
+                  $.post(this.link, {
+                      utente: this.user,
+                      password: this.psws,
+                      action: 'Request AllPrenotazioniGuest'
+                  }, function (data) {
+                      if(data === 'invalidate') {
+                          alert('Sessione invalidata');
+                      } else {
+                          let allPrenotazioniOBJ = JSON.parse(data);
+                          self.allprenotazioni = allPrenotazioniOBJ;
+                          console.log(self.allprenotazioni);
+                      }
+                  });
+              },
+              AllBookAdmin: function () {
+                  var self = this;
+                  if(this.allbooking === false) {
+                      this.login = false;
+                      this.addbooking = false;
+                      this.booking = false;
+                      this.pannels = false;
+                      this.mybooking = false;
+                      this.allbooking = true;
+                      this.showstorico = false;
+                  }
+                  $.post(this.link, {
+                      utente: this.user,
+                      password: this.psws,
+                      role : this.role,
+                      action: 'Request AllPrenotazioniAdmin'
+                  }, function (data) {
+                      if(data === 'invalidate') {
+                          alert('Sessione invalidata');
+                      } else {
+                          let allPrenotazioniOBJ = JSON.parse(data);
+                          self.allprenotazioni = allPrenotazioniOBJ;
+                          console.log(self.allprenotazioni);
+                      }
+                  });
+              },
+              Pannels: function () {
+                  if (this.home === true || this.addbooking === true || this.booking === true || this.deletebooking === true || this.mybooking === true || this.allbooking === true || this.adminaddbooking === true || this.showstorico === true) {
+                      this.pannels = true;
+                      this.home = false;
+                      this.addbooking = false;
+                      this.booking = false;
+                      this.deletebooking = false;
+                      this.mybooking = false;
+                      this.allbooking = false;
+                      this.adminaddbooking = false;
+                      this.showstorico = false;
+                  }
+              },
+              AdminAdd: function () {
+                  if(this.adminaddbooking === false) {
+                      this.adminaddbooking = true;
+                      this.pannels = false;
+                      this.home = false;
+                      this.addbooking = false;
+                      this.booking = false;
+                      this.deletebooking = false;
+                      this.mybooking = false;
+                      this.allbooking = false;
+                      this.showstorico = false;
+                  }
+              },
+              LogOut: function () {
+                  var self = this;
+                  $.post(this.link, {
+                      utente: this.user,
+                      password: this.psws,
+                      action: 'Request logout'
+                  }, function (data) {
+                      if (self.pannels === true || self.booking === true || self.addbooking === true || self.deletebooking === true || self.mybooking === true || self.allbooking === true || self.adminaddbooking === true || self.showstorico === true) {
+                          self.login = true;
+                          self.pannels = false;
+                          self.booking = false;
+                          self.addbooking = false;
+                          self.mybooking = false;
+                          self.allbooking = false;
+                          self.adminaddbooking = false;
+                          self.showstorico = false;
+                      }
+                    });
+              },
+              Prenota: function () {
+                  if (this.booking === false) {
+                      this.login = false;
+                      this.pannels = false;
+                      this.booking = true;
+                      this.addbooking = false;
+                      this.allbooking = false;
+                      this.showstorico = false;
+                  }
+              },
+              AddBooking: function () {
+                  var self = this;
+                  self.jsonResult = '';
+                  if (this.addbooking === false) {
+                      this.login = false;
+                      this.pannels = false;
+                      this.booking = false;
+                      this.addbooking = true;
+                      this.showstorico = false;
+                      //usare jQuery
+                      $.post(this.link, {
+                          user: this.user,
+                          password: this.password,
+                          action: 'Request AllPrenotazioniDisponibili'
+                      }, function (data) {
+                          if (data === 'invalidate') {
+                              alert('Sessione invalidata!');
+                          } else {
+                              let coursesObj = JSON.parse(data);
+                              //console.log(coursesObj);
+                              self.allprenotazioni = coursesObj;
+                              console.log("self.corsis : " + self.allprenotazioni);
+                          }
+                      });
+                  }
+              },
+              DeleteBooking: function () {
+                  var self = this;
+                  this.jsonResult = '';
+                  if (this.deletebooking === false) {
+                      this.login = false;
+                      this.pannels = false;
+                      this.booking = false;
+                      this.addbooking = false;
+                      this.deletebooking = true;
+                      this.showstorico = false;
+                  }
+                  $.post(this.link, {utente: this.user, password: this.psws, action: 'Request prenotazioni'},
+                      function (data) {
+                          if (data === 'invalidate') {
+                              alert('Sessione invalidata!');
+                          } else {
+                              let prenotazioniOBJ = JSON.parse(data);
+                              self.prenotazioni = prenotazioniOBJ;
+                              console.log(self.prenotazioni);
+                          }
+                      });
+
+              },
+              addChoiche: function (p) {
+                  var self = this;
+                  $.post(this.link, {
+                      user: this.user,
+                      password: this.psws,
+                      NomeDocente: p.nomeDocente,
+                      CognomeDocente:p.cognomeDocente,
+                      corso: p.Corso,
+                      giorno: p.giorno,
+                      orario: p.orario,
+                      action: "Insert Prenotazione"
+                  }, function (data) {
+                      if (data === 'invalidate') {
+                          alert('Sessione invalidata!');
+                      }else{
+                          alert("Prenotazione Effettuata con successo!");
+
+                      }
+                  });
+
+              },
+              deleteChoice:function (p) {
+                  var self = this;
+                  $.post(this.link, {
+                      user: self.user,
+                      password: this.psws,
+                      NomeDocente: p.nomeDocente,
+                      CognomeDocente:p.cognomeDocente,
+                      corso: p.Corso,
+                      giorno: p.giorno,
+                      orario: p.orario,
+                      action: "Delete Prenotazione"
+                  }, function (data) {
+                      if (data === 'invalidate') {
+                          alert('Sessione invalidata!');
+                      }else{
+                          alert("Prenotazione Eliminata con successo!");
+
+                      }
+                  });
+              },
+              MyBook:function (){
+                  var self = this;
+                  this.jsonResult = '';
+                  if (this.mybooking === false) {
+                      this.login = false;
+                      this.pannels = false;
+                      this.booking = false;
+                      this.addbooking = false;
+                      this.allbooking = false;
+                      this.mybooking = true;
+                      this.showstorico = false;
+                  }
+                  $.post(this.link, {utente: this.user, password: this.psws, action: 'Request prenotazioni'},
+                      function (data) {
+                          if (data === 'invalidate') {
+                              alert('Sessione invalidata!');
+                          } else {
+                              //alert('Visualizza le prenotazioni personali!');
+                              let prenotazioniOBJ = JSON.parse(data);
+                              self.prenotazioni = prenotazioniOBJ;
+                              console.log(self.prenotazioni);
+                          }
+                      });
+              },
+              adminInsert: function () {
+                  nomeDocente = this.nomeDocente;
+                  cognomeDocente = this.cognomeDocente;
+                  ID_Docente = this.id_docente;
+                  Corso = this.corso;
+                  ID_Corso = this.id_corso;
+                  if((nomeDocente !== '' && cognomeDocente !== '' && ID_Docente !== '') && (ID_Corso === '' && Corso === '')){
+                      $.post(this.link, {nomeDocente: this.nomeDocente,
+                          cognomeDocente:this.cognomeDocente,
+                          ID_Docente:this.id_docente,action: 'Insert admin Docente'},
+                          function(data){
+                            alert('Inserimento solo del docente ['+nomeDocente+' '+cognomeDocente+']');
+                            if(data === 'invalidate'){
+                                alert('Sessione invalidata!');
+                            }
+                          });
+                  }else if((Corso !== '' && ID_Corso !== '') && (nomeDocente === '' && cognomeDocente === '' && ID_Docente === '')){
+                      $.post(this.link, {Corso: this.corso,
+                              ID_Corso:this.id_corso,action: 'Insert admin Corso'},
+                          function(data){
+                              alert('Inserimento solo del corso : < '+Corso+'>');
+                              if(data === 'invalidate'){
+                                  alert('Sessione invalidata!');
+                              }
+                          });
+                  }else{
+                        $.post(this.link, {nomeDocente: this.nomeDocente, cognomeDocente:this.cognomeDocente, ID_Docente:this.id_docente, Corso:this.corso, ID_Corso: this.id_corso,
+                            action: 'Insert admin'},
+                            function (data) {
+                                alert('Inserimento del docente ['+nomeDocente+' '+cognomeDocente+' e del corso : < '+Corso+' >')
+                                if(data === 'invalidate') {
+                                    alert('Sessione invalidata!');
+                                }
+                        });
+                  }
+              },
+              adminDelete: function () {
+                  nomeDocente = this.nomeDocente;
+                  cognomeDocente = this.cognomeDocente;
+                  ID_Docente = this.id_docente;
+                  Corso = this.corso;
+                  ID_Corso = this.id_corso;
+                  if((nomeDocente !== '' && cognomeDocente !== '' && ID_Docente !== '') && (ID_Corso === '' && Corso === '')){
+                      $.post(this.link, {nomeDocente: this.nomeDocente,
+                              cognomeDocente:this.cognomeDocente,
+                              ID_Docente:this.id_docente,action: 'Delete admin Docente'},
+                          function(data){
+                              alert('Eliminazione solo del docente ['+nomeDocente+' '+cognomeDocente+']');
+                              if(data === 'invalidate'){
+                                  alert('Sessione invalidata!');
+                              }
+                          });
+                  }else if((Corso !== '' && ID_Corso !== '') && (nomeDocente === '' && cognomeDocente === '' && ID_Docente === '')){
+                      $.post(this.link, {Corso: this.corso,
+                              ID_Corso:this.id_corso,action: 'Delete admin Corso'},
+                          function(data){
+                              alert('Eliminazione solo del corso : < '+Corso+'>');
+                              if(data === 'invalidate'){
+                                  alert('Sessione invalidata!');
+                              }
+                          });
+                  }else{
+                      $.post(this.link, {nomeDocente: this.nomeDocente, cognomeDocente:this.cognomeDocente, ID_Docente:this.id_docente, Corso:this.corso, ID_Corso: this.id_corso,
+                              action: 'Delete admin'},
+                          function (data) {
+                              alert('Eliminazione del docente ['+nomeDocente+' '+cognomeDocente+' e del corso : < '+Corso+' >')
+                              if(data === 'invalidate') {
+                                  alert('Sessione invalidata!');
+                              }
+                          });
+                  }
+              }
+          }
+        })
+    </script>
+</body>
+</html>
